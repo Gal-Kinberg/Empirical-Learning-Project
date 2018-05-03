@@ -1,4 +1,6 @@
-clear; close all ; clc;
+close all
+clear
+% clc
 
 %%
 L=5; g=9.8; 
