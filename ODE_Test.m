@@ -2,48 +2,65 @@ close all
 clear
 % clc
 
+PLOT_MOVIE = false;
+
 %%
-L=5; g=9.8; 
-w0 = sqrt(g/L); T = 2*pi/w0; f0 =1/T;
+L  = 5;
+g  = 9.8; 
+w0 = sqrt(g / L);
+T  = 2 * pi / w0;
+f0 = 1 / T;
 
-Tmax = 35; dt = 0.1;
-tspan = 0:dt:Tmax;
+Tmax = 35;
+dt   = 0.1;
+vT   = (0 : dt : Tmax)';
+N    = length(vT);
 
-% Initial Conditions: y0(1) is angle, y0(2) is angular velocity, y0(3) is
-% pole length (L)
-y0 = [pi/5 0 L];
-damp = 0.1
-[t,y] = ode45(@(t,y) [(y(2)) ; -(g/y(3))*sin(y(1))-damp*y(2) ; 0], tspan, y0);
+%-- Initial Conditions: y0(1) is angle, y0(2) is angular velocity, y0(3) is
+%-- pole length (L)
+y0    = [pi/5 0 L];
+damp  = 0.1;
+ODE   = @(t,y) [y(2);
+                -g / y(3) * sin(y(1)) - damp * y(2);
+                0];
+[~, mY] = ode45(ODE, vT, y0);
 
-
-figure();
-for i = 2:numel(t)
-    plot(0,0,'.black','MarkerSize',20); % plot black dot at center
-    % plot "mass":
-    hold on; plot(y(i,3)*sin(y(i,1)),-y(i,3)*cos(y(i,1)),'.','MarkerSize',45);
-    % plot "pole":
-    plot([0 y(i,3)*sin(y(i,1))],[0 -y(i,3)*cos(y(i,1))],'LineWidth',3); hold off;
-
-    %   aesthetics:
-    xlim([-1.5*y(i,3) 1.5*y(i,3)]); ylim([-1.5*y(i,3) 1.5*y(i,3)]); grid on;
-    title(['L = ',num2str(y(i,3)),'[m]  f0 = ',num2str(f0),' [Hz]']);
-    xlabel(['t = ',num2str(t(i)),' [sec]']);
-    drawnow;
+%%
+if PLOT_MOVIE == true
+    figure();
+    for ii = 2 : numel(vT)
+        plot(0, 0, '.black', 'MarkerSize', 20); %-- plot black dot at center
+        
+        %-- plot "mass":
+        hold on; plot(mY(ii,3) * sin(mY(ii,1)), -mY(ii,3) * cos(mY(ii,1)), '.', 'MarkerSize', 45);
+        set(gca, 'FontSize', 16);
+        
+        %-- plot "pole":
+        plot([0 mY(ii,3) * sin(mY(ii,1))], [0 -mY(ii,3) * cos(mY(ii,1))], 'LineWidth', 3); hold off;
+        
+        %-- aesthetics:
+        xlim([-1.5 * mY(ii,3) 1.5*mY(ii,3)]); ylim([-1.5*mY(ii,3) 1.5*mY(ii,3)]); grid on;
+        title(['L = ',num2str(mY(ii,3)),'[m]  f_0 = ',num2str(f0),' [Hz]']);
+        xlabel(['t = ',num2str(vT(ii)),' [sec]']);
+        drawnow;
+    end
 end
 
 %% Diffusion Map
-Fs = 1/dt;
+Fs         = 1 / dt;
+mW         = squareform( pdist(mY) );
+eps        = median(mW(:));
+mK         = exp(-mW.^2 / eps^2);
+mA         = mK ./ sum(mK, 2);
 
-distances = squareform(pdist(y));
-eps = median(y(:,1));
-W = exp(-(distances.^2)./((100*eps)^2));
-A = W./sum(W,2);
-[Phi, Lambda] = eig(A);
-f = linspace(-Fs/2,Fs/2,numel(y(:,1)));
+[mPhi, mLam] = eig(mA);
+f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
 
-figure;
-stem(f,abs(fftshift(fft(Phi(:,2)))));
+figure; hold on; set(gca, 'FontSize', 16);
+plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
 xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector');
+vYlim = ylim;
+plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
 
 %% Plot with Phase Space Test
 % figure();
