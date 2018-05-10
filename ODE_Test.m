@@ -3,7 +3,6 @@ clear
 % clc
 
 PLOT_MOVIE = false;
-
 %%
 L  = 5;
 g  = 9.8; 
@@ -46,19 +45,66 @@ if PLOT_MOVIE == true
     end
 end
 
+%% Phone Data
+% PhoneData = load('Merged_raw_data_3.csv');
+% dt = 0.02;
+% mY = PhoneData.
+
+
 %% Diffusion Map
-Fs         = 1 / dt;
+Fs = 1 / dt;
+        
 mW         = squareform( pdist(mY) );
 eps        = median(mW(:));
 mK         = exp(-mW.^2 / eps^2);
 mA         = mK ./ sum(mK, 2);
+
+N = size(mY,1);
+[mPhi, mLam] = eig(mA);
+f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
+
+figure; hold on; set(gca, 'FontSize', 16);
+plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
+xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY');
+vYlim = ylim;
+plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
+
+%% XY Diffusion
+
+mY_XY = [L * sin(mY(:,1)), -L * cos(mY(:,1))];
+
+mW         = squareform( pdist(mY_XY) );
+eps        = median(mW(:));
+mK         = exp(-mW.^2 / eps^2);
+mA         = mK ./ sum(mK, 2);
+
+N = size(mY_XY,1);
+[mPhi, mLam] = eig(mA);
+f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
+
+figure; hold on; set(gca, 'FontSize', 16);
+plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
+xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY_{XY}');
+vYlim = ylim;
+plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
+
+%% Velocity Diffusion
+vel = diff(mY_XY) / dt;
+N = size(vel, 1);
+mY_V = [ mY_XY(1:N,:) vel ];
+
+mW         = squareform( pdist(mY_V) );
+eps        = median(mW(:));
+mK         = exp(-mW.^2 / eps^2);
+mA         = mK ./ sum(mK, 2);
+
 
 [mPhi, mLam] = eig(mA);
 f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
 
 figure; hold on; set(gca, 'FontSize', 16);
 plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
-xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector');
+xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY_V');
 vYlim = ylim;
 plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
 
@@ -80,4 +126,3 @@ plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
 %     xlabel y; ylabel 'dy/dt';
 %     title 'The Matrix';
 %     drawnow;
-% end
