@@ -2,7 +2,7 @@ close all
 clear
 % clc
 
-PLOT_MOVIE = false;
+PLOT_MOVIE = true;
 %%
 L  = 5;
 g  = 9.8; 
@@ -25,9 +25,10 @@ ODE   = @(t,y) [y(2);
 [~, mY] = ode45(ODE, vT, y0);
 
 %%
+F(1) = struct('cdata',[],'colormap',[]);
 if PLOT_MOVIE == true
     figure();
-    for ii = 2 : numel(vT)
+    for ii = 1 : numel(vT)
         plot(0, 0, '.black', 'MarkerSize', 20); %-- plot black dot at center
         
         %-- plot "mass":
@@ -36,15 +37,22 @@ if PLOT_MOVIE == true
         
         %-- plot "pole":
         plot([0 mY(ii,3) * sin(mY(ii,1))], [0 -mY(ii,3) * cos(mY(ii,1))], 'LineWidth', 3); hold off;
-        
         %-- aesthetics:
-        xlim([-1.5 * mY(ii,3) 1.5*mY(ii,3)]); ylim([-1.5*mY(ii,3) 1.5*mY(ii,3)]); grid on;
-        title(['L = ',num2str(mY(ii,3)),'[m]  f_0 = ',num2str(f0),' [Hz]']);
-        xlabel(['t = ',num2str(vT(ii)),' [sec]']);
+        xlim([-L, L]);
+        ylim([-1.5*L, 0.1]); grid on;
+%         title(['L = ',num2str(mY(ii,3)),'[m]  f_0 = ',num2str(f0),' [Hz]']);
+%         xlabel(['t = ',num2str(vT(ii)),' [sec]']);
+        xticks([]);
+        yticks([]);
         drawnow;
+        
+        
+        F(ii) = getframe(gcf);
     end
 end
 
+v = VideoWriter('VideoTest1.avi');
+open(v); writeVideo(v, F); close(v);
 
 %% Diffusion Map
 Fs = 1 / dt;

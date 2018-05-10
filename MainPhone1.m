@@ -3,26 +3,18 @@ clear
 % clc
 
 PLOT_MOVIE = false;
-%%
-L  = 5;
-g  = 9.8; 
-w0 = sqrt(g / L);
-T  = 2 * pi / w0;
-f0 = 1 / T;
 
-Tmax = 35;
-dt   = 0.1;
-vT   = (0 : dt : Tmax)';
-N    = length(vT);
+dirPath = './Phone_Data/';
 
-%-- Initial Conditions: y0(1) is angle, y0(2) is angular velocity, y0(3) is
-%-- pole length (L)
-y0    = [pi/5 0 L];
-damp  = 0.1;
-ODE   = @(t,y) [y(2);
-                -g / y(3) * sin(y(1)) - damp * y(2);
-                0];
-[~, mY] = ode45(ODE, vT, y0);
+%% Phone Data
+Fs        = 50;
+dt        = 1 / Fs;
+
+fileName  = 'Merged_raw_data_1.xlsx';
+[M, ~, X] = xlsread([dirPath, fileName]);
+T         = readtable([dirPath, fileName]);
+
+% mY = PhoneData.
 
 %%
 if PLOT_MOVIE == true
@@ -44,7 +36,6 @@ if PLOT_MOVIE == true
         drawnow;
     end
 end
-
 
 %% Diffusion Map
 Fs = 1 / dt;
