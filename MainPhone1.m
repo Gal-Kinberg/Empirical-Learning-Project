@@ -74,12 +74,13 @@ eps        = median(mW(:));
 mK         = exp(-mW.^2 / eps^2);
 mA         = mK ./ sum(mK, 2);
 
-N = size(mY,1);
+% N = size(mY,1);
+N = 2^12;
 [mPhi, mLam] = eig(mA);
 f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
 
 figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft( mPhi(:,2)  ) ) ), 'LineWidth', 2 );
+plot(f, fftshift( abs( fft( ( mPhi(:,2) ), N ) ) ), 'LineWidth', 2 );
 xlabel('f [Hz]'); title('Fourier of First (non-trivial) Eigenvector');
 grid on;
 % vYlim = ylim;
