@@ -1,44 +1,73 @@
 close all
 clear
-% clc
 
 PLOT_MOVIE = false;
 
-dirPath = './Phone_Data/';
+dirPath = './Phone_Data/Phone_27.5/';
 
-%% Phone Data
+%% Movies Description
+%{
+    Pend (1-4)      - Two Frequencies Tests
+    Pend (5)        - 2D Frequncies Test
+    Pend (6-7)      - No Phone Tests
+    Pend (8)        - Simple Test
+    Pend (9)        - Fail
+    Pend (10)       - Dark Shot
+    Pend (11-13)    - Close Angles
+    Pend (14-15)    - Spring Tests
+    Pend (16-17)    - Spring
+    Pend (18-20)    - Pend + Spring
+    Pend (21)       - Fluorescent
+    Pend (22-23)    - Fluorescent Slo-Mo + Pend
+
+    Pend_01         - Light Shot
+    Pend_02-04      - Small, Mid, Large Amplitudes
+    Pend_05         - Angle Shot
+    Pend_06         - Angle Large Amp
+    Pend_07         - Steady Hand-Held
+    Pend_08         - Unstable Hand-Held
+    Pend_09         - Tracking Hand-Held
+
+    Pend_Self (1-4) - Shots From The Pendulum Phone
+%}
+
+%% Load Phone Data
 Fs        = 50;
 dt        = 1 / Fs;
+L         = 1.5;
 
-fileName  = 'Merged_raw_data_1.xlsx';
-[M, ~, X] = xlsread([dirPath, fileName]);
+fileName  = 'Pend_04.xlsx';
+% [M, ~, X] = xlsread([dirPath, fileName]);
 T         = readtable([dirPath, fileName]);
 
-% mY = PhoneData.
+%% Extract Data
+mY          = T.Acceleration_z_Cm_sec_2;
+[~, minind] = min(mY);
+mY          = mY(minind:end);
+plot(mY);
 
-%%
+%% Plot Simulation Movie
 if PLOT_MOVIE == true
     figure();
-    for ii = 2 : numel(vT)
+    for ii = 2 : numel(mY)
         plot(0, 0, '.black', 'MarkerSize', 20); %-- plot black dot at center
         
         %-- plot "mass":
-        hold on; plot(mY(ii,3) * sin(mY(ii,1)), -mY(ii,3) * cos(mY(ii,1)), '.', 'MarkerSize', 45);
+        hold on; plot(L * sin(mY(ii,1)), -L * cos(mY(ii,1)), '.', 'MarkerSize', 45);
         set(gca, 'FontSize', 16);
         
         %-- plot "pole":
-        plot([0 mY(ii,3) * sin(mY(ii,1))], [0 -mY(ii,3) * cos(mY(ii,1))], 'LineWidth', 3); hold off;
+        plot([0 L * sin(mY(ii,1))], [0 -L * cos(mY(ii,1))], 'LineWidth', 3); hold off;
         
         %-- aesthetics:
-        xlim([-1.5 * mY(ii,3) 1.5*mY(ii,3)]); ylim([-1.5*mY(ii,3) 1.5*mY(ii,3)]); grid on;
-        title(['L = ',num2str(mY(ii,3)),'[m]  f_0 = ',num2str(f0),' [Hz]']);
-        xlabel(['t = ',num2str(vT(ii)),' [sec]']);
+        xlim([-1.5 * L 1.5*L]); ylim([-1.5*L 1.5*L]); grid on;
+%         title(['L = ',num2str(mY(ii,3)),'[m]  f_0 = ',num2str(f0),' [Hz]']);
+%         xlabel(['t = ',num2str(vT(ii)),' [sec]']);
         drawnow;
     end
 end
 
 %% Diffusion Map
-Fs = 1 / dt;
         
 mW         = squareform( pdist(mY) );
 eps        = median(mW(:));
@@ -50,65 +79,8 @@ N = size(mY,1);
 f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
 
 figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
-xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY');
-vYlim = ylim;
-plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
-
-%% XY Diffusion
-
-mY_XY = [L * sin(mY(:,1)), -L * cos(mY(:,1))];
-
-mW         = squareform( pdist(mY_XY) );
-eps        = median(mW(:));
-mK         = exp(-mW.^2 / eps^2);
-mA         = mK ./ sum(mK, 2);
-
-N = size(mY_XY,1);
-[mPhi, mLam] = eig(mA);
-f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
-
-figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
-xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY_{XY}');
-vYlim = ylim;
-plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
-
-%% Velocity Diffusion
-vel = diff(mY_XY) / dt;
-N = size(vel, 1);
-mY_V = [ mY_XY(1:N,:) vel ];
-
-mW         = squareform( pdist(mY_V) );
-eps        = median(mW(:));
-mK         = exp(-mW.^2 / eps^2);
-mA         = mK ./ sum(mK, 2);
-
-
-[mPhi, mLam] = eig(mA);
-f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
-
-figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
-xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY_V');
-vYlim = ylim;
-plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
-
-%% Plot with Phase Space Test
-% figure();
-% for i = 2:numel(t)
-%     subplot(1,2,1);
-%     plot(y(i,3)*sin(y(i,1)),-y(i,3)*cos(y(i,1)),'.','MarkerSize',45);
-%     hold on; plot([0 y(i,3)*sin(y(i,1))],[0 -y(i,3)*cos(y(i,1))],'LineWidth',3); hold off;
-%     xlim([-L L]); ylim([-1.5*L L]); grid on;
-%     % xlabel t; ylabel y ;
-%     title 'Real Space';
-%     drawnow;
-%     subplot(1,2,2);
-%     hold on;
-%     plot(y(i,1),y(i,2),'.b','MarkerSize',10);
-%     hold on; plot([y(i-1,1) y(i,1)],[y(i-1,2) y(i,2)],'LineWidth',3); hold off;
-%     xlim([min(y(:,1)) max(y(:,1))]); ylim([min(y(:,2)) max(y(:,2))]); grid on;
-%     xlabel y; ylabel 'dy/dt';
-%     title 'The Matrix';
-%     drawnow;
+plot(f, fftshift( abs( fft( mPhi(:,2)  ) ) ), 'LineWidth', 2 );
+xlabel('f [Hz]'); title('Fourier of First (non-trivial) Eigenvector');
+grid on;
+% vYlim = ylim;
+% plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
