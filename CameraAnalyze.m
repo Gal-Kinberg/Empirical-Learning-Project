@@ -32,38 +32,40 @@ dirPath = './Pandulum_Movies/';
 %}
 %% Read Movie
 
-mov               = VideoReader('Pend (21).MP4');
+mov               = VideoReader('Pend (11).MP4');
 mov.CurrentTime   = 0;             %-- Movie start time in seconds
 EndTime           = mov.Duration;  %-- mov.Duration for whole movie
 Fs                = mov.FrameRate;
 dt                = 1 / Fs;
+FramsNum          = Fs * mov.Duration;
 Scale             = 0.1;
 video             = [];
 
+Chain = 10;
 %-- Cropped is for movies 21-24
-while ( hasFrame(mov) && mov.CurrentTime <= EndTime )
+while ( hasFrame(mov) && mov.CurrentTime <= (EndTime - (Chain + 1) * dt) )
     frame          = readFrame(mov);
-%     cropped        = imcrop(frame,[900 290 500 450]);
-%     rotated        = imrotate(cropped,90);
+    %     cropped        = imcrop(frame,[900 290 500 450]);
+    %     rotated        = imrotate(cropped,90);
     scaled_frame   = imresize( rgb2gray(frame) ,Scale);
-    video          = [video scaled_frame(:)];
-end
+    temp = scaled_frame;
+%   chain several frames together:
+    if Chain > 1
+        for i = 1 : (Chain - 1)
+            if(hasFrame(mov))
+                frame          = readFrame(mov);
+                scaled_frame   = imresize( rgb2gray(frame) ,Scale);
+                temp           = [temp(:) ; scaled_frame(:)];
+            end
+        end
+    end
+%   add current frames to final matrix
+    video              = [video temp];
+end 
 mY = double(video');
 %% Diffusion Map
 
-mW         = squareform( pdist(mY) );
-eps        = median(mW(:));
-mK         = exp(-mW.^2 / eps^2);
-mA         = mK ./ sum(mK, 2);
+[mPhi, mLam] = DiffusionMap(mY);
 
-N = size(mY,1);
-[mPhi, mLam] = eig(mA);
-f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
-
-figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
-xlabel('f [Hz]'); title('Fourier of first (non-trivial) eigenvector, mY');
-grid on;
-
-% vYlim = ylim;
-% plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
+figure;
+DiffusionPlot(mPhi,1,Fs / Chain,0);
