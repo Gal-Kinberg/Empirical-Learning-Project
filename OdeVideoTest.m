@@ -1,4 +1,4 @@
-%% Video Test
+%% Video Simulator
 close all
 clear
 
@@ -7,7 +7,7 @@ PLOT_MOVIE = true;
 RECORD_MOVIE = true;
 %% Create Pendulum Simulation
 L  = 5;
-g  = 9.8; 
+g  = 9.8;
 wp = sqrt(g / L);
 T  = 2 * pi / wp;
 f0 = 1 / T;
@@ -28,8 +28,8 @@ ODE   = @(t,y) [y(2);
 
 %% Create Spring Simulation
 if SPRING == true
-K    = 7;
-m    = 1; 
+K    = 10;
+m    = 1;
 w_sp = sqrt(K / m);
 T_sp = 2 * pi / w_sp;
 f_sp = 1 / T_sp;
@@ -59,7 +59,7 @@ if PLOT_MOVIE == true
         plot(0, 0, '.black', 'MarkerSize', 20); 
         
         %-- plot "mass":
-        hold on; plot(mY(ii,3) * sin(mY(ii,1)), -mY(ii,3) * cos(mY(ii,1)), '.', 'MarkerSize', 45);
+        hold on; plot(mY(ii,3) * sin(mY(ii,1)), -mY(ii,3) * cos(mY(ii,1)), '.', 'MarkerSize', 100);
         set(gca, 'FontSize', 16);
         
         %-- plot "pole":
@@ -67,12 +67,12 @@ if PLOT_MOVIE == true
         
         if SPRING == true
         %-- plot spring mass
-        plot( xa , -0.7 * L + mY_sp(ii,1), '.red', 'MarkerSize', 45);
+        plot( xa , -0.7 * L + mY_sp(ii,1), '.red', 'MarkerSize', 100);
         
         %-- plot spring
         plot(xa, ya, '.black', 'MarkerSize', 20); 
         [xs,ys] = spring(xa, ya, xa , -0.7 * L + mY_sp(ii,1)); 
-        plot(xs,ys,'LineWidth',2);
+        plot(xs,ys,'LineWidth',3);
         end
         
         hold off;
@@ -91,14 +91,15 @@ if PLOT_MOVIE == true
         F(ii) = getframe(gcf);
     end
 end
+close;
 
 if RECORD_MOVIE == true
-v = VideoWriter('VideoTest1.avi');
+v = VideoWriter('SimulationVideo.avi');
 open(v); writeVideo(v, F); close(v);
 end
 %% Read Movie
 
-mov   = VideoReader('VideoTest1.avi');
+mov   = VideoReader('SimulationVideo.avi');
 Scale = 0.1;
 video = [];
 while hasFrame(mov)
@@ -108,17 +109,32 @@ end
 mY = double(video');
 %% Diffusion Map
 
-mW         = squareform( pdist(mY) );
-eps        = median(mW(:));
-mK         = exp(-mW.^2 / eps^2);
-mA         = mK ./ sum(mK, 2);
+[mPhi, mLam] = DiffusionMap(mY);
 
-N = size(mY,1);
-[mPhi, mLam] = eig(mA);
-f            = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
+N = 2^12;
+f = Fs / 2 * linspace(-1, 1, N + 1); f(end) = [];
 
-figure; hold on; set(gca, 'FontSize', 16);
-plot(f, fftshift( abs( fft(mPhi(:,2)) ) ), 'LineWidth', 2 );
+figure;
+if SPRING == true
+    subplot(121);
+end
+hold on; set(gca, 'FontSize', 16);
+plot(f, fftshift( abs( fft(mPhi(:,2), N ) ) ), 'LineWidth', 2 );
 xlabel('f [Hz]'); title('Fourier of First (non-trivial) Eigenvector');
 vYlim = ylim;
 plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
+grid minor;
+
+if SPRING == true
+    plot([f_sp, f_sp], [vYlim(1), vYlim(2)], ':g', 'LineWidth', 2 );
+    legend('Fourier Transform','f_{pend}','f_{spring}');
+    
+    subplot(122); hold on; set(gca, 'FontSize', 16);
+    plot(f, fftshift( abs( fft(mPhi(:,3), N) ) ), 'LineWidth', 2 );
+    xlabel('f [Hz]'); title('Fourier of Second (non-trivial) Eigenvector');
+    vYlim = ylim;
+    plot([f0, f0], [vYlim(1), vYlim(2)], ':r', 'LineWidth', 2 );
+    grid minor;
+    plot([f_sp, f_sp], [vYlim(1), vYlim(2)], ':g', 'LineWidth', 2 );
+    legend('Fourier Transform','f_{pend}','f_{spring}');
+end
